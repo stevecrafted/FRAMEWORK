@@ -6,3 +6,5 @@ build/
 
 # Ignore le dossier lib
 lib/
+
+target/
