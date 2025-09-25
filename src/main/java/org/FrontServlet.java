@@ -4,33 +4,45 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
-
-import java.io.IOException;
-import java.util.logging.Logger;
+import javax.servlet.ServletContext;
+import java.io.*;
 
 public class FrontServlet extends HttpServlet {
 
-    // On crée un logger lié à cette classe
-    private static final Logger logger = Logger.getLogger(FrontServlet.class.getName());
-
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // Log INFO
-        logger.info("Requête interceptée par FrontServlet : " + req.getRequestURI());
-        System.out.println("Requête interceptée par FrontServlet : " + req.getRequestURI());
+        String uri = req.getRequestURI();
+        String contextPath = req.getContextPath();
+        String path = uri.substring(contextPath.length()); // ex: /index.html
 
-        logger.fine("Debugging : paramètres de la requête = " + req.getParameterMap());
-        System.out.println("Debugging : paramètres de la requête = " + req.getParameterMap());
-
-        // Log WARNING
-        if (req.getRequestURI().contains("forbidden")) {
-            logger.warning("Accès suspect : " + req.getRequestURI());
+        if (path.equals("/") || path.isEmpty()) {
+            path = "/index.html"; // page d’accueil
         }
 
-        // Réponse simple
-        resp.setContentType("text/plain");
-        resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURI());
-        System.out.println("FrontServlet a reçu : " + req.getRequestURI());
-    }
+        ServletContext sc = getServletContext();
 
+        // Vérifie si la ressource existe
+        InputStream is = sc.getResourceAsStream(path);
+        if (is != null) {
+            // Détecter le type MIME
+            String mime = sc.getMimeType(path);
+            if (mime == null) {
+                mime = "application/octet-stream"; // fallback
+            }
+            resp.setContentType(mime);
+
+            try (OutputStream os = resp.getOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, len);
+                }
+            }
+            return;
+        }
+        
+        // Sinon : pas de fichier trouvé → traitement appli
+        resp.setContentType("text/plain; charset=UTF-8");
+        resp.getWriter().write("FrontServlet a reçu : " + uri);
+    }
 }
