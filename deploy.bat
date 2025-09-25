@@ -1,9 +1,10 @@
 @echo off
 setlocal
 
-set "TOMCAT_HOME=C:\apache-tomcat-10.1.28"
+set "TOMCAT_HOME=C:\xampp\tomcat"
 set "TOMCAT_WEBAPPS=%TOMCAT_HOME%\webapps"
-set WAR_FILE=target\SpringInit.war
+set "TEST_LIB=C:\Users\steve\Documents\S5\MrNaina\TEST\src\main\webapp\WEB-INF\lib"
+set "JAR_FILE=target\SpringInit-1.jar"
 
 echo ------------------------------
 echo Compiling and packaging Maven...
@@ -18,32 +19,36 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist "%WAR_FILE%" (
-    echo ERREUR : WAR file not found : %WAR_FILE%
+if not exist "%JAR_FILE%" (
+    echo ERREUR : JAR file not found : %JAR_FILE%
     pause
     exit /b 1
 )
 
 echo ------------------------------
-echo Copying war file to Tomcat ...
+echo Copying jar file to Test ...
 echo ------------------------------
 
-copy /Y "%WAR_FILE%" "%TOMCAT_WEBAPPS%\"
+:: Suppression du jar dans Test si exist
+if exist "%TEST_LIB%" rmdir %TEST_LIB%
+mkdir %TEST_LIB%
+
+copy /Y "%JAR_FILE%" "%TEST_LIB%\"
 
 if errorlevel 1 (
-    echo ERREUR : La copie du WAR vers Tomcat a échoué.
+    echo ERREUR : La copie du JAR vers Test a échoué.
     pause
     exit /b 1
 )
 
-echo Deployment done successfully.
+echo copy done successfully.
 
-echo Starting Tomcat...
-set CATALINA_HOME=%TOMCAT_HOME%
-call "%TOMCAT_HOME%\bin\catalina.bat" start
-if %errorlevel% neq 0 (
-    echo Error: Failed to start Tomcat.
-    exit /b 1
-)
+@REM echo Starting Tomcat...
+@REM set CATALINA_HOME=%TOMCAT_HOME%
+@REM call "%TOMCAT_HOME%\bin\catalina.bat" start
+@REM if %errorlevel% neq 0 (
+@REM     echo Error: Failed to start Tomcat.
+@REM     exit /b 1
+@REM )
 
 pause
