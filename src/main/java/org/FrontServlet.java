@@ -21,7 +21,7 @@ public class FrontServlet extends HttpServlet {
         String path = req.getRequestURI().substring(req.getContextPath().length());
 
         boolean ressourceExist = getServletContext().getResource(path) != null;
-
+        
         if (!ressourceExist) {
             resp.setContentType("text/plain; charset=UTF-8");
             resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL());
