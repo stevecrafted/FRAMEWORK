@@ -43,12 +43,4 @@ if errorlevel 1 (
 
 echo copy done successfully.
 
-@REM echo Starting Tomcat...
-@REM set CATALINA_HOME=%TOMCAT_HOME%
-@REM call "%TOMCAT_HOME%\bin\catalina.bat" start
-@REM if %errorlevel% neq 0 (
-@REM     echo Error: Failed to start Tomcat.
-@REM     exit /b 1
-@REM )
-
 pause
