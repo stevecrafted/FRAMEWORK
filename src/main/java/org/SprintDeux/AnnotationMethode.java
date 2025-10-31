@@ -14,8 +14,8 @@ import java.lang.annotation.Target;
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER, ElementType.CONSTRUCTOR})
-public @interface Annotation {
+@Target({ElementType.METHOD})
+public @interface AnnotationMethode {
     /**
      * Optional value for the annotation.
      */
