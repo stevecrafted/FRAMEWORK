@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.Entity.ClassMethodUrl;
+import org.Entity.ModelView;
 import org.Util.CmuUtils;
 import org.custom.CustomReflections;
 
@@ -58,16 +59,25 @@ public class FrontServlet extends HttpServlet {
             // Raha String dia Executena Tenenina ho type string io
             if (cmu.getMyMethod().getReturnType() == String.class) {
                 printToClient(resp, "Cette methode renvoie un String\n");
+
                 // Execution anle methode
-                cmu.ExecuteMethode(resp);
+                String result = cmu.ExecuteMethode(resp);
+                resp.getWriter().write("Resutltat du fonction \n");
+                resp.getWriter().write(result);
+
+            } else if (cmu.getMyMethod().getReturnType() == ModelView.class) {
+                printToClient(resp, "Cette methode renvoie un Model View\n");
+                String result = cmu.ExecuteMethode(resp);
+                
+                // Affichage du resultat
+                RequestDispatcher dispatcher = req.getRequestDispatcher("/" + result);
+                dispatcher.forward(req, resp);
             }
             // Raha != String sy ModelView
             else {
-                printToClient(resp, "Sady tsy String no tsy Model View");
+                printToClient(resp, "Sady tsy String no tsy Model View ny averiny");
             }
-
-            // Raha Model view
-            // Averina ilay test.jsp
+            
         } else {
             resp.getWriter().write("Error 404");
         }
