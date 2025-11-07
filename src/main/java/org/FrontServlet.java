@@ -8,11 +8,11 @@ import javax.servlet.ServletException;
 import javax.servlet.RequestDispatcher;
 import java.io.*;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.Entity.ClassMethodUrl;
-import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
 import org.Util.CmuUtils;
 import org.custom.CustomReflections;
 
@@ -20,21 +20,19 @@ public class FrontServlet extends HttpServlet {
 
     private RequestDispatcher defaultDispatcher;
     private CustomReflections reflections;
-    private List<ClassMethodUrl> listClassMethodUrl;
+    Map<String, ClassMethodUrl> urlMappings = new HashMap<>();
 
     @Override
     public void init() {
         defaultDispatcher = getServletContext().getNamedDispatcher("default");
 
         reflections = new CustomReflections(
-                "org.example"
-                );
+                "org.example");
 
         // Sauvegardena anaty classeMethodeUrl daolo izay mampiasa anle Annotation
         // namboarina
         System.out.println("---------- Sauvegarde des url ----------");
-        listClassMethodUrl = new ArrayList<>();
-        CmuUtils.saveCmuList(reflections, listClassMethodUrl);
+        CmuUtils.saveCmuList(reflections, urlMappings);
 
     }
 
@@ -42,7 +40,7 @@ public class FrontServlet extends HttpServlet {
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
 
-        ClassMethodUrl cmu = isExisted(path);
+        ClassMethodUrl cmu = CmuUtils.findMapping(path, urlMappings);
 
         resp.setContentType("text/plain; charset=UTF-8");
         resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
@@ -52,17 +50,6 @@ public class FrontServlet extends HttpServlet {
         } else {
             resp.getWriter().write("Error 404");
         }
-    }
-
-    private ClassMethodUrl isExisted(String path) {
-        for (ClassMethodUrl cmu : listClassMethodUrl) {
-            if (path.equals(cmu.getMyUrl())) {
-                System.out.println("trouvé");
-                return cmu;
-            }
-        }
-
-        return null;
     }
 
 }
