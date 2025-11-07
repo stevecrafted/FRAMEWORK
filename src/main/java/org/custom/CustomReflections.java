@@ -9,7 +9,7 @@ import java.util.*;
 
 /**
  * Classe Reflection personnalisée qui scanne les packages
- * et trouve les classes/méthodes annotées
+ * et trouve wles classes/méthodes annotées
  * 
  * FONCTIONNEMENT:
  * 1. Scanne le classpath pour trouver toutes les classes dans un package

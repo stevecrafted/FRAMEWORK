@@ -1,16 +1,18 @@
 package org.Entity;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import javax.servlet.http.HttpServletResponse;
 
 public class ClassMethodUrl {
     Class<?> Class;
     Method Method;
-    String Url;
 
-    public ClassMethodUrl(Class<?> Class, Method method, String url) {
+    public ClassMethodUrl(Class<?> Class, Method method) {
         this.Class = Class;
         this.Method = method;
-        this.Url = url;
     }
 
     public Class<?> getMyClass() {
@@ -29,11 +31,21 @@ public class ClassMethodUrl {
         this.Method = m;
     }
 
-    public String getMyUrl() {
-        return this.Url;
-    }
+    public void ExecuteMethode(HttpServletResponse resp) throws IOException {
+        try {
+            Object controller = this.Class.getDeclaredConstructor().newInstance();
+            Object result = this.Method.invoke(controller);
 
-    public void SetMyUrs(String u) {
-        this.Url = u;
+            if (result instanceof String) {
+                String viewName = (String) result;
+
+                resp.getWriter().write("Resutltat du fonction \n");
+                resp.getWriter().write(viewName);
+            }
+
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+            e.printStackTrace();
+        }
     }
 }
