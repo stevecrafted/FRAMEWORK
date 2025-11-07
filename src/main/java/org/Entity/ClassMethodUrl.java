@@ -31,21 +31,23 @@ public class ClassMethodUrl {
         this.Method = m;
     }
 
-    public void ExecuteMethode(HttpServletResponse resp) throws IOException {
+    public String ExecuteMethode(HttpServletResponse resp) throws IOException {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
             Object result = this.Method.invoke(controller);
 
             if (result instanceof String) {
                 String viewName = (String) result;
-
-                resp.getWriter().write("Resutltat du fonction \n");
-                resp.getWriter().write(viewName);
+                return viewName;
+            } else if (result instanceof ModelView) {
+                return ((ModelView)result).getView();
             }
 
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
         }
+
+        return "";
     }
 }

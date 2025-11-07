@@ -1,3 +1,4 @@
+org\Entity\ModelView.class
 org\custom\CustomReflections.class
 org\SprintDeux\AnnotationMethode.class
 org\SprintDeuxBis\AnnotationContoller.class
