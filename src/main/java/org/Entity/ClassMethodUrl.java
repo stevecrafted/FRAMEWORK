@@ -3,7 +3,9 @@ package org.Entity;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class ClassMethodUrl {
@@ -31,7 +33,7 @@ public class ClassMethodUrl {
         this.Method = m;
     }
 
-    public String ExecuteMethode(HttpServletResponse resp) throws IOException {
+    public String ExecuteMethode(HttpServletResponse resp, HttpServletRequest req) throws IOException {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
             Object result = this.Method.invoke(controller);
@@ -40,6 +42,13 @@ public class ClassMethodUrl {
                 String viewName = (String) result;
                 return viewName;
             } else if (result instanceof ModelView) {
+                ModelView modelViewResultExecution = (ModelView)result;
+                Map<String, Object> resultExecution = modelViewResultExecution.getAllAttributes();
+
+                for (Map.Entry<String, Object> resultatModelView : resultExecution.entrySet()) {
+                    req.setAttribute(resultatModelView.getKey(), resultatModelView.getValue());
+                }
+                // resp.seta
                 return ((ModelView)result).getView();
             }
 
