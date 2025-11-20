@@ -1,7 +1,8 @@
+org\annotation\AnnotationMethode.class
 org\Entity\ModelView.class
+org\annotation\AnnotationContoller.class
 org\custom\CustomReflections.class
-org\SprintDeux\AnnotationMethode.class
-org\SprintDeuxBis\AnnotationContoller.class
 org\Entity\ClassMethodUrl.class
 org\FrontServlet.class
 org\Util\CmuUtils.class
+org\Util\ParameterMapper.class
