@@ -6,14 +6,6 @@ import java.lang.reflect.Parameter;
 
 public class ParameterMapper {
 
-    /**
-     * Mappe les paramètres HTTP de la requête vers un tableau d'arguments
-     * compatible avec la méthode à invoquer
-     * 
-     * @param req    La requête HTTP contenant les paramètres
-     * @param method La méthode dont on veut mapper les paramètres
-     * @return Un tableau d'objets représentant les arguments à passer à la méthode
-     */
     public static Object[] mapParameters(Parameter[] methodParameters, HttpServletRequest req, Method method) {
         Object[] methodArgs = new Object[methodParameters.length];
 
@@ -24,25 +16,38 @@ public class ParameterMapper {
             Parameter param = methodParameters[i];
             String paramName = param.getName();
             String paramValue = req.getParameter(paramName);
-
+            
+            // Tsy null ito raha itany ao anaty requete ny parametre
             if (paramValue != null) {
                 methodArgs[i] = convertParameter(paramValue, param.getType(), paramName);
             } else {
-                System.out.println("Parametre " + paramName + " non trouve dans la requete");
+                // Sprint 6 bis
+                // Raha tsy hitany ao anaty Parametre anle methode ilay nom ao amle requete dia
+                // jerena raha mampiasa anle annotaion RequestParam
+                
+                // System.out.println("Parametre " + paramName + " non trouve dans la requete, verification annotation requestParam");
+                if (param.isAnnotationPresent(org.annotation.AnnotationRequestParam.class)) {
+                    // System.out.println("AnnotationRequestParam trouvee pour le parametre " + paramName);
+
+                    org.annotation.AnnotationRequestParam requestParamAnnotation = param
+                            .getAnnotation(org.annotation.AnnotationRequestParam.class);
+                    String requestParamName = requestParamAnnotation.value();
+                    String requestParamValue = req.getParameter(requestParamName);
+
+                    if (requestParamValue != null) {
+                        methodArgs[i] = convertParameter(requestParamValue, param.getType(), requestParamName);
+                    } else {
+                        System.out.println("Parametre " + requestParamName + " non trouve dans la requete");
+                    }
+                } else {
+                    System.out.println("Parametre " + paramName + " non trouve dans la requete");
+                }
             }
         }
 
         return methodArgs;
     }
 
-    /**
-     * Convertit une valeur String vers le type attendu
-     * 
-     * @param value      La valeur à convertir (String)
-     * @param targetType Le type cible de la conversion
-     * @param paramName  Le nom du paramètre (pour les logs)
-     * @return L'objet converti dans le bon type
-     */
     private static Object convertParameter(String value, Class<?> targetType, String paramName) {
         try {
             Object convertedValue;
@@ -66,7 +71,6 @@ public class ParameterMapper {
                 convertedValue = value;
 
             } else {
-                // Par défaut, on retourne la String
                 System.out.println("Type non supporte pour " + paramName + ", retour en String");
                 convertedValue = value;
             }

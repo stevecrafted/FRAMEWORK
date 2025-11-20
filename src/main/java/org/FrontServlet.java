@@ -42,7 +42,7 @@ public class FrontServlet extends HttpServlet {
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-
+    
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
