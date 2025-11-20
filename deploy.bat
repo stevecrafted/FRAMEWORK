@@ -7,9 +7,9 @@ set "TEST_LIB=C:\Users\steve\Documents\S5\MrNaina\TEST\src\main\webapp\WEB-INF\l
 set "JAR_FILE=target\SpringInit-1.jar"
 
 echo ------------------------------
-echo Compiling and packaging Maven...
+echo Compiling and installing into local Maven repository...
 echo ------------------------------
-call mvn clean package
+call mvn -DskipTests clean install
 
 echo mvn done, return : %ERRORLEVEL%
 
@@ -29,9 +29,11 @@ echo ------------------------------
 echo Copying jar file to Test ...
 echo ------------------------------
 
-:: Suppression du jar dans Test si exist
-if exist "%TEST_LIB%" rmdir %TEST_LIB%
-mkdir %TEST_LIB%
+:: Suppression du jar dans Test si exist (supprime récursivement et silencieusement)
+if exist "%TEST_LIB%" (
+    rmdir /S /Q "%TEST_LIB%"
+)
+mkdir "%TEST_LIB%"
 
 copy /Y "%JAR_FILE%" "%TEST_LIB%\"
 

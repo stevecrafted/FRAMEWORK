@@ -4,8 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest; 
 
 public class ClassMethodUrl {
     Class<?> Class;
@@ -33,10 +32,10 @@ public class ClassMethodUrl {
     }
 
     // Mi execute anle methode raha string no averiny
-    public String ExecuteMethodeString() throws Exception {
+    public String ExecuteMethodeString(Object[]argumentArgs) throws Exception {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
-            Object result = this.Method.invoke(controller);
+            Object result = this.Method.invoke(controller, argumentArgs);
 
             if (result instanceof String) {
                 String viewName = (String) result;
@@ -54,10 +53,10 @@ public class ClassMethodUrl {
     }
 
     // Mi execute anle methode raha model view no averiny
-    public String ExecuteMethodeModelView(HttpServletRequest req) throws Exception {
+    public String ExecuteMethodeModelView(HttpServletRequest req, Object[]argumentArgs) throws Exception {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
-            Object result = this.Method.invoke(controller);
+            Object result = this.Method.invoke(controller, argumentArgs);
 
             if (result instanceof ModelView) {
                 ModelView modelViewResultExecution = (ModelView) result;

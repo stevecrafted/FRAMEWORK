@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.Entity.ClassMethodUrl;
-import org.SprintDeux.AnnotationMethode;
-import org.SprintDeuxBis.AnnotationContoller;
+import org.annotation.AnnotationContoller;
+import org.annotation.AnnotationMethode;
 import org.custom.CustomReflections;
 import org.reflections.Reflections;
 

@@ -11,12 +11,15 @@ import javax.servlet.ServletContext;
 import java.io.*;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
 
 import org.Entity.ClassMethodUrl;
 import org.Entity.ModelView;
 import org.Util.CmuUtils;
+import org.Util.ParameterMapper;
 import org.custom.CustomReflections;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 
 public class FrontServlet extends HttpServlet {
 
@@ -29,8 +32,7 @@ public class FrontServlet extends HttpServlet {
         defaultDispatcher = getServletContext().getNamedDispatcher("default");
 
         reflections = new CustomReflections(
-                "org.example"
-        );
+                "org.example");
 
         // Sauvegardena anaty classeMethodeUrl daolo izay mampiasa anle Annotation
         // namboarina
@@ -40,47 +42,59 @@ public class FrontServlet extends HttpServlet {
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-    
+
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
-
         ClassMethodUrl cmu = CmuUtils.findMapping(path, urlMappings);
 
         resp.setContentType("text/plain; charset=UTF-8");
         resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
 
         if (cmu != null) {
-
-            printToClient(resp, "Cette url existe dans la classe " + cmu.getMyClass() + " dans la methode "
-                    + cmu.getMyMethod());
-
-            // Jerena ny type de retour any
-            // Raha String dia Executena Tenenina ho type string io
-            // Raha modele view dia affichena le page
             try {
+                /**
+                 * Sprint 6 : Matching des parametres entre l'url get ou
+                 * post par formulaire avec les attributs
+                 * de la methode
+                 */
+                Method methode = cmu.getMyMethod();
+                Parameter[] methodParameters = methode.getParameters();
+                Method method = cmu.getMyMethod();
+
+                // Mapping des paramètres HTTP vers les arguments de méthode
+                Object[] methodArgs = ParameterMapper.mapParameters(methodParameters, req, method);
+
+                printToClient(resp, "Cette url existe dans la classe " + cmu.getMyClass() + " dans la methode "
+                        + cmu.getMyMethod());
+
+                // Exécution selon le type de retour
                 if (cmu.getMyMethod().getReturnType() == String.class) {
                     printToClient(resp, "Cette methode renvoie un String\n");
-                    // Execution anle methode
-                    String result = cmu.ExecuteMethodeString();
 
-                    printToClient(resp, "Resutltat du fonction \n");
+                    // Invocation avec les arguments
+                    String result = cmu.ExecuteMethodeString(methodArgs);
+
+                    printToClient(resp, "Resultat de la fonction : \n");
                     printToClient(resp, result);
 
                 } else if (cmu.getMyMethod().getReturnType() == ModelView.class) {
                     printToClient(resp, "Cette methode renvoie un Model View\n");
-                    String result = cmu.ExecuteMethodeModelView(req);
+
+                    // Ato no mandefa ny attribute rehetra any am client
+                    String result = cmu.ExecuteMethodeModelView(req, methodArgs);
 
                     // Affichage du resultat
                     defaultDispatcher = req.getRequestDispatcher("/" + result);
                     defaultDispatcher.forward(req, resp);
-                }
-                // Raha != String sy ModelView
-                else {
+
+                } else {
                     printToClient(resp, "Sady tsy String no tsy Model View ny averiny");
                 }
+
             } catch (Exception e) {
                 e.printStackTrace();
+                printToClient(resp, "Erreur : " + e.getMessage());
             }
         } else {
             printToClient(resp, "Error 404");

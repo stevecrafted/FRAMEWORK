@@ -20,7 +20,7 @@ public class ModelView {
         this.view = v;
     }
 
-    public void addAttribute(String keyString, Object data) throws Exception {
+    public void addAttribute(String keyString, Object data) {
         this.data.put(keyString, data);
     }
 
