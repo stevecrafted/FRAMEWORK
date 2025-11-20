@@ -9,11 +9,9 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.Entity.ClassMethodUrl;
 import org.Entity.ModelView;
@@ -31,7 +29,8 @@ public class FrontServlet extends HttpServlet {
         defaultDispatcher = getServletContext().getNamedDispatcher("default");
 
         reflections = new CustomReflections(
-                "org.example");
+                "org.example"
+        );
 
         // Sauvegardena anaty classeMethodeUrl daolo izay mampiasa anle Annotation
         // namboarina
@@ -41,7 +40,7 @@ public class FrontServlet extends HttpServlet {
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-
+    
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
@@ -50,6 +49,7 @@ public class FrontServlet extends HttpServlet {
 
         resp.setContentType("text/plain; charset=UTF-8");
         resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
+
         if (cmu != null) {
 
             printToClient(resp, "Cette url existe dans la classe " + cmu.getMyClass() + " dans la methode "
@@ -57,29 +57,33 @@ public class FrontServlet extends HttpServlet {
 
             // Jerena ny type de retour any
             // Raha String dia Executena Tenenina ho type string io
-            if (cmu.getMyMethod().getReturnType() == String.class) {
-                printToClient(resp, "Cette methode renvoie un String\n");
+            // Raha modele view dia affichena le page
+            try {
+                if (cmu.getMyMethod().getReturnType() == String.class) {
+                    printToClient(resp, "Cette methode renvoie un String\n");
+                    // Execution anle methode
+                    String result = cmu.ExecuteMethodeString();
 
-                // Execution anle methode
-                String result = cmu.ExecuteMethode(resp);
-                resp.getWriter().write("Resutltat du fonction \n");
-                resp.getWriter().write(result);
+                    printToClient(resp, "Resutltat du fonction \n");
+                    printToClient(resp, result);
 
-            } else if (cmu.getMyMethod().getReturnType() == ModelView.class) {
-                printToClient(resp, "Cette methode renvoie un Model View\n");
-                String result = cmu.ExecuteMethode(resp);
-                
-                // Affichage du resultat
-                RequestDispatcher dispatcher = req.getRequestDispatcher("/" + result);
-                dispatcher.forward(req, resp);
+                } else if (cmu.getMyMethod().getReturnType() == ModelView.class) {
+                    printToClient(resp, "Cette methode renvoie un Model View\n");
+                    String result = cmu.ExecuteMethodeModelView(req);
+
+                    // Affichage du resultat
+                    defaultDispatcher = req.getRequestDispatcher("/" + result);
+                    defaultDispatcher.forward(req, resp);
+                }
+                // Raha != String sy ModelView
+                else {
+                    printToClient(resp, "Sady tsy String no tsy Model View ny averiny");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            // Raha != String sy ModelView
-            else {
-                printToClient(resp, "Sady tsy String no tsy Model View ny averiny");
-            }
-            
         } else {
-            resp.getWriter().write("Error 404");
+            printToClient(resp, "Error 404");
         }
     }
 

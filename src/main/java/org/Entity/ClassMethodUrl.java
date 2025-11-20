@@ -1,9 +1,10 @@
 package org.Entity;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class ClassMethodUrl {
@@ -31,7 +32,8 @@ public class ClassMethodUrl {
         this.Method = m;
     }
 
-    public String ExecuteMethode(HttpServletResponse resp) throws IOException {
+    // Mi execute anle methode raha string no averiny
+    public String ExecuteMethodeString() throws Exception {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
             Object result = this.Method.invoke(controller);
@@ -39,8 +41,39 @@ public class ClassMethodUrl {
             if (result instanceof String) {
                 String viewName = (String) result;
                 return viewName;
-            } else if (result instanceof ModelView) {
-                return ((ModelView)result).getView();
+            } else {
+                throw new Exception("le type de retour doit etre de type String");
+            }
+
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+            e.printStackTrace();
+        }
+
+        return "";
+    }
+
+    // Mi execute anle methode raha model view no averiny
+    public String ExecuteMethodeModelView(HttpServletRequest req) throws Exception {
+        try {
+            Object controller = this.Class.getDeclaredConstructor().newInstance();
+            Object result = this.Method.invoke(controller);
+
+            if (result instanceof ModelView) {
+                ModelView modelViewResultExecution = (ModelView) result;
+                Map<String, Object> resultExecution = modelViewResultExecution.getAllAttributes();
+
+                if (req == null) {
+                    throw new Exception("L'objet req est null");
+                }
+
+                for (Map.Entry<String, Object> resultatModelView : resultExecution.entrySet()) {
+                    req.setAttribute(resultatModelView.getKey(), resultatModelView.getValue());
+                }
+
+                return ((ModelView) result).getView();
+            } else {
+                throw new Exception("le type de retour doit etre de type model view");
             }
 
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
