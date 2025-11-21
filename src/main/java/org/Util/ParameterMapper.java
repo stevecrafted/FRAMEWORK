@@ -1,6 +1,7 @@
 package org.Util;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Map;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
@@ -15,32 +16,55 @@ public class ParameterMapper {
         for (int i = 0; i < methodArgs.length; i++) {
             Parameter param = methodParameters[i];
             String paramName = param.getName();
+
+            /*
+             * Sprint 6
+             * Raha ita any anaty requet ?id=zavatra na post avy any am formulaire dia alefa
+             * direct any am
+             * parametre le valeur
+             */
             String paramValue = req.getParameter(paramName);
-            
-            // Tsy null ito raha itany ao anaty requete ny parametre
             if (paramValue != null) {
                 methodArgs[i] = convertParameter(paramValue, param.getType(), paramName);
-            } else {
-                // Sprint 6 bis
-                // Raha tsy hitany ao anaty Parametre anle methode ilay nom ao amle requete dia
-                // jerena raha mampiasa anle annotaion RequestParam izy izay
-                // System.out.println("Parametre " + paramName + " non trouve dans la requete, verification annotation requestParam");
-                if (param.isAnnotationPresent(org.annotation.AnnotationRequestParam.class)) {
-                    // System.out.println("AnnotationRequestParam trouvee pour le parametre " + paramName);
+                continue;
+            }
 
-                    org.annotation.AnnotationRequestParam requestParamAnnotation = param
-                            .getAnnotation(org.annotation.AnnotationRequestParam.class);
-                    String requestParamName = requestParamAnnotation.value();
-                    String requestParamValue = req.getParameter(requestParamName);
-
-                    if (requestParamValue != null) {
-                        methodArgs[i] = convertParameter(requestParamValue, param.getType(), requestParamName);
-                    } else {
-                        System.out.println("Parametre " + requestParamName + " non trouve dans la requete");
-                    }
-                } else {
-                    System.out.println("Parametre " + paramName + " non trouve dans la requete");
+            /*
+             * Sprint 6 Ter, raha toa ka /{id}/url...
+             * dia ao omena direct anle
+             * 
+             * Efa sauvegarde ato aminy "req.getAttribute("pathVars")
+             * daolo ny nom anle parametre sy ny valeur any
+             */
+            Object attr = req.getAttribute("pathVars");
+            if (attr instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> pathVars = (Map<String, String>) attr;
+                String raw = pathVars.get(paramName);
+                if (raw != null) {
+                    methodArgs[i] = convertParameter(raw, param.getType(), paramName);
+                    continue;
                 }
+            }
+
+            /*
+             * Sprint 6 bis
+             * Raha mampiasa annotation @RequestParam dia matchena ilay valeur
+             */
+            if (param.isAnnotationPresent(org.annotation.AnnotationRequestParam.class)) {
+                org.annotation.AnnotationRequestParam requestParamAnnotation = param
+                        .getAnnotation(org.annotation.AnnotationRequestParam.class);
+                String requestParamName = requestParamAnnotation.value();
+                String requestParamValue = req.getParameter(requestParamName);
+
+                if (requestParamValue != null) {
+                    methodArgs[i] = convertParameter(requestParamValue, param.getType(), requestParamName);
+                    continue;
+                } else {
+                    System.out.println("Parametre " + requestParamName + " non trouve dans la requete");
+                }
+            } else {
+                System.out.println("Parametre " + paramName + " non trouve dans la requete");
             }
         }
 
