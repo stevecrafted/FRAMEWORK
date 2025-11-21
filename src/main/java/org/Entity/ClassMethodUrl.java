@@ -43,7 +43,7 @@ public class ClassMethodUrl {
             } else {
                 throw new Exception("le type de retour doit etre de type String");
             }
-
+            
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();

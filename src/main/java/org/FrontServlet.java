@@ -42,12 +42,12 @@ public class FrontServlet extends HttpServlet {
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-    
+
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
         ClassMethodUrl cmu = CmuUtils.findMapping(path, urlMappings);
-
+        
         resp.setContentType("text/plain; charset=UTF-8");
         resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
 

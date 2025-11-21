@@ -23,8 +23,7 @@ public class ParameterMapper {
             } else {
                 // Sprint 6 bis
                 // Raha tsy hitany ao anaty Parametre anle methode ilay nom ao amle requete dia
-                // jerena raha mampiasa anle annotaion RequestParam
-                
+                // jerena raha mampiasa anle annotaion RequestParam izy izay
                 // System.out.println("Parametre " + paramName + " non trouve dans la requete, verification annotation requestParam");
                 if (param.isAnnotationPresent(org.annotation.AnnotationRequestParam.class)) {
                     // System.out.println("AnnotationRequestParam trouvee pour le parametre " + paramName);
