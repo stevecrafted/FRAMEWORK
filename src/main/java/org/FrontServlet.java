@@ -42,27 +42,28 @@ public class FrontServlet extends HttpServlet {
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-    
+
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
-        ClassMethodUrl cmu = CmuUtils.findMapping(path, urlMappings);
+        ClassMethodUrl cmu;
 
-        resp.setContentType("text/plain; charset=UTF-8");
-        resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
+        try {
+            cmu = CmuUtils.findMapping(path, urlMappings, req);
 
-        if (cmu != null) {
-            try {
+            resp.setContentType("text/plain; charset=UTF-8");
+            resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
+
+            if (cmu != null) {
+                Method methode = cmu.getMyMethod();
+                Parameter[] methodParameters = methode.getParameters();
+                Method method = cmu.getMyMethod();
+
                 /**
                  * Sprint 6 : Matching des parametres entre l'url get ou
                  * post par formulaire avec les attributs
                  * de la methode
                  */
-                Method methode = cmu.getMyMethod();
-                Parameter[] methodParameters = methode.getParameters();
-                Method method = cmu.getMyMethod();
-
-                // Mapping des paramètres HTTP vers les arguments de méthode
                 Object[] methodArgs = ParameterMapper.mapParameters(methodParameters, req, method);
 
                 printToClient(resp, "Cette url existe dans la classe " + cmu.getMyClass() + " dans la methode "
@@ -92,12 +93,12 @@ public class FrontServlet extends HttpServlet {
                     printToClient(resp, "Sady tsy String no tsy Model View ny averiny");
                 }
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                printToClient(resp, "Erreur : " + e.getMessage());
+            } else {
+                printToClient(resp, "Error 404");
             }
-        } else {
-            printToClient(resp, "Error 404");
+        } catch (Exception e) {
+            e.printStackTrace();
+            printToClient(resp, "Erreur : " + e.getMessage());
         }
     }
 
