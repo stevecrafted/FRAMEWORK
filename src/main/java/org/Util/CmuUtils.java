@@ -9,8 +9,12 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 
 import org.Entity.ClassMethodUrl;
+import org.Entity.HttpMethod;
 import org.annotation.AnnotationContoller;
 import org.annotation.AnnotationMethode;
+import org.annotation.GetMapping;
+import org.annotation.PostMapping;
+import org.annotation.RequestMapping;
 import org.custom.CustomReflections;
 
 public class CmuUtils {
@@ -22,18 +26,44 @@ public class CmuUtils {
 
             for (Method method : controller.getDeclaredMethods()) {
 
-                // Izay methode annotée amle AnnotationMethode iany no alaina
-                if (method.isAnnotationPresent(AnnotationMethode.class)) {
+                String url = null;
+                HttpMethod httpMethod = null;
 
-                    String url = method.getAnnotation(AnnotationMethode.class).value();
+                // Vérifier @GetMapping
+                if (method.isAnnotationPresent(GetMapping.class)) {
+                    url = method.getAnnotation(GetMapping.class).value();
+                    httpMethod = HttpMethod.GET;
+                }
+                // Vérifier @PostMapping
+                else if (method.isAnnotationPresent(PostMapping.class)) {
+                    url = method.getAnnotation(PostMapping.class).value();
+                    httpMethod = HttpMethod.POST;
+                }
+                // Vérifier @RequestMapping
+                else if (method.isAnnotationPresent(RequestMapping.class)) {
+                    RequestMapping annotation = method.getAnnotation(RequestMapping.class);
+                    url = annotation.value();
+                    httpMethod = annotation.method();
+                }
+                // Vérifier @AnnotationMethode (rétrocompatibilité)
+                else if (method.isAnnotationPresent(AnnotationMethode.class)) {
+                    url = method.getAnnotation(AnnotationMethode.class).value();
+                    // Par défaut, GET pour la rétrocompatibilité
+                    httpMethod = HttpMethod.GET;
+                }
+                
+                // Si une annotation de mapping a été trouvée
+                if (url != null && httpMethod != null) {
+                    // Créer la clé avec l'URL et la méthode HTTP
+                    String key = httpMethod.name() + ":" + url;
 
                     ClassMethodUrl cmu = new ClassMethodUrl(controller, method);
-                    urlMappings.put(url, cmu);
+                    cmu.setHttpMethod(httpMethod);
+                    urlMappings.put(key, cmu);
 
-                    System.out.println("Url : " + url + " methode : " + method.getName() + " Controller : "
-                            + controller.getName());
+                    System.out.println("Url : " + url + " | HTTP Method : " + httpMethod + " | Java Method : " 
+                            + method.getName() + " | Controller : " + controller.getName());
                 }
-
             }
         }
     }
@@ -60,14 +90,42 @@ public class CmuUtils {
      */
     public static ClassMethodUrl findMapping(String url, Map<String, ClassMethodUrl> urlMappings,
             HttpServletRequest request) throws Exception {
+        
+        // Récupérer la méthode HTTP de la requête
+        String requestMethod = request.getMethod(); // "GET" ou "POST"
+        String keyWithMethod = requestMethod + ":" + url;
+
+        System.out.println("Recherche du mapping pour : " + keyWithMethod);
+
+        // Try exact match with HTTP method first
+        if (urlMappings.containsKey(keyWithMethod)) {
+            request.setAttribute("pathVars", new HashMap<String, String>());
+            System.out.println("Mapping exact trouvé : " + keyWithMethod);
+            return urlMappings.get(keyWithMethod);
+        }
 
         // Try templates with {var} placeholders
         for (String key : urlMappings.keySet()) {
-            if (!key.contains("{")) {
+            // Extraire la méthode HTTP et l'URL de la clé
+            String[] keyComponents = key.split(":", 2);
+            if (keyComponents.length != 2) {
                 continue;
             }
 
-            String[] keyParts = key.split("/");
+            String keyMethod = keyComponents[0];
+            String keyUrl = keyComponents[1];
+
+            // Vérifier si la méthode HTTP correspond
+            if (!keyMethod.equals(requestMethod)) {
+                continue;
+            }
+
+            // Vérifier si l'URL contient des variables
+            if (!keyUrl.contains("{")) {
+                continue;
+            }
+
+            String[] keyParts = keyUrl.split("/");
             String[] urlParts = url.split("/");
 
             if (keyParts.length != urlParts.length) {
@@ -83,15 +141,13 @@ public class CmuUtils {
 
                 if (kp.startsWith("{") && kp.endsWith("}")) {
                     String varName = kp.substring(1, kp.length() - 1);
-                    System.out.println("hita tao anaty url le varname\n");
-                    System.out.println("Varname : " + varName + " url valeur : " + up);
+                    System.out.println("Variable trouvée dans l'URL : " + varName + " = " + up);
                     
                     pathVars.put(varName, up);
                 } else {
                     // Raha misy iray tsy mitovy dia tsy mety zany
                     if (!kp.equals(up)) {
-                        System.out.println("Tsy mitovy\n");
-                        System.out.println("kp : " + kp + " up : " + up + "\n");
+                        System.out.println("Partie de l'URL ne correspond pas : " + kp + " != " + up);
 
                         isMatch = false;
                         break;
@@ -106,17 +162,12 @@ public class CmuUtils {
             
             // matched: expose extracted path variables and return mapping
             request.setAttribute("pathVars", pathVars);
+            System.out.println("Mapping avec variables trouvé : " + key);
             return urlMappings.get(key);
         }
 
-        // Exact match first
-        if (urlMappings.containsKey(url)) {
-            // no path variables
-            request.setAttribute("pathVars", new HashMap<String, String>());
-            return urlMappings.get(url);
-        }
-
         // No mapping found
+        System.out.println("Aucun mapping trouvé pour : " + keyWithMethod);
         return null;
     }
 
