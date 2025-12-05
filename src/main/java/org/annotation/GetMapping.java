@@ -7,21 +7,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation générique pour mapper une méthode de contrôleur à une URL.
- * 
- * Note: Cette annotation est conservée pour la rétrocompatibilité.
- * Il est recommandé d'utiliser @GET ou @POST pour plus de clarté.
- *
- * Exemple d'utilisation :
- * <pre>
- * {@code @AnnotationMethode("/user/list")}
- * public ModelView listUsers() { ... }
- * </pre>
+ * Annotation pour mapper une méthode à une requête HTTP GET.
+ *  
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface AnnotationMethode {
+public @interface GetMapping {
     /**
      * URL de la route (ex: "/user/list")
      */

@@ -21,7 +21,7 @@ import org.custom.CustomReflections;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
-public class FrontServlet extends HttpServlet {
+public class FrontServlet extends HttpServlet { 
 
     private RequestDispatcher defaultDispatcher;
     private CustomReflections reflections;
@@ -38,7 +38,7 @@ public class FrontServlet extends HttpServlet {
         // namboarina
         System.out.println("---------- Sauvegarde des url ----------");
         CmuUtils.saveCmuList(reflections, urlMappings);
-
+        
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
@@ -47,14 +47,14 @@ public class FrontServlet extends HttpServlet {
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
         ClassMethodUrl cmu;
-
-        try {
+        
+        try {   
             cmu = CmuUtils.findMapping(path, urlMappings, req);
 
             resp.setContentType("text/plain; charset=UTF-8");
             resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
-
-            if (cmu != null) {
+            
+            if (cmu != null) { 
                 Method methode = cmu.getMyMethod();
                 Parameter[] methodParameters = methode.getParameters();
                 Method method = cmu.getMyMethod();

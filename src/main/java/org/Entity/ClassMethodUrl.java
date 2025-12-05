@@ -4,11 +4,29 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest; 
+import javax.servlet.http.HttpServletRequest;
 
 public class ClassMethodUrl {
     Class<?> Class;
     Method Method;
+    HttpMethod httpMethod;
+
+    // HttpMethod ato (get na post)
+    // Au moment mampiditra anle map dia verifiena method anle request (request
+    // getmethode)
+    // setena
+    // Manao anle url
+    // Supportena
+    // Miexiste ve le methode
+    // Request mapping dia iray iany
+    
+    public HttpMethod getHttpMethod() {
+        return httpMethod;
+    }
+
+    public void setHttpMethod(HttpMethod method) {
+        this.httpMethod = method;
+    }
 
     public ClassMethodUrl(Class<?> Class, Method method) {
         this.Class = Class;
@@ -32,7 +50,7 @@ public class ClassMethodUrl {
     }
 
     // Mi execute anle methode raha string no averiny
-    public String ExecuteMethodeString(Object[]argumentArgs) throws Exception {
+    public String ExecuteMethodeString(Object[] argumentArgs) throws Exception {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
             Object result = this.Method.invoke(controller, argumentArgs);
@@ -43,7 +61,7 @@ public class ClassMethodUrl {
             } else {
                 throw new Exception("le type de retour doit etre de type String");
             }
-            
+
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
@@ -53,7 +71,7 @@ public class ClassMethodUrl {
     }
 
     // Mi execute anle methode raha model view no averiny
-    public String ExecuteMethodeModelView(HttpServletRequest req, Object[]argumentArgs) throws Exception {
+    public String ExecuteMethodeModelView(HttpServletRequest req, Object[] argumentArgs) throws Exception {
         try {
             Object controller = this.Class.getDeclaredConstructor().newInstance();
             Object result = this.Method.invoke(controller, argumentArgs);

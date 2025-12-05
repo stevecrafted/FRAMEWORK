@@ -1,9 +1,13 @@
 C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\custom\CustomReflections.java
 C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\Util\ParameterMapper.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\Entity\ModelView.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\PostMapping.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\AnnotationRequestParam.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\GetMapping.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\FrontServlet.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\Entity\HttpMethod.java
 C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\AnnotationContoller.java
 C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\Entity\ClassMethodUrl.java
 C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\AnnotationMethode.java
-C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\Entity\ModelView.java
-C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\AnnotationRequestParam.java
-C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\FrontServlet.java
+C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\annotation\RequestMapping.java
 C:\Users\steve\Documents\S5\MrNaina\FRAMEWORK\src\main\java\org\Util\CmuUtils.java
