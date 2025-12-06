@@ -15,8 +15,8 @@ public class ModelView {
         return this.view;
     }
 
-    public void setView(String v) {
-        this.view = v;
+    public void setView(String viewPath) {
+        this.view = viewPath;
     }
 
     public void addAttribute(String keyString, Object data) {

@@ -28,7 +28,7 @@ public class CmuUtils {
 
                 String url = null;
                 HttpMethod httpMethod = null;
-
+                
                 // Vérifier @GetMapping
                 if (method.isAnnotationPresent(GetMapping.class)) {
                     url = method.getAnnotation(GetMapping.class).value();

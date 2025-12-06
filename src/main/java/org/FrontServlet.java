@@ -32,8 +32,9 @@ public class FrontServlet extends HttpServlet {
         defaultDispatcher = getServletContext().getNamedDispatcher("default");
 
         reflections = new CustomReflections(
-                "org.example");
-
+                "org.example"
+        );
+        
         // Sauvegardena anaty classeMethodeUrl daolo izay mampiasa anle Annotation
         // namboarina
         System.out.println("---------- Sauvegarde des url ----------");
@@ -42,13 +43,14 @@ public class FrontServlet extends HttpServlet {
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-
+    
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
         ClassMethodUrl cmu;
         
         try {   
+            // Jerena raha misy ao amle Url mapping le url miditra io 
             cmu = CmuUtils.findMapping(path, urlMappings, req);
 
             resp.setContentType("text/plain; charset=UTF-8");
