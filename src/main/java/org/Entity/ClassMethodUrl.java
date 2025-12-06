@@ -69,7 +69,7 @@ public class ClassMethodUrl {
 
         return "";
     }
-
+    
     // Mi execute anle methode raha model view no averiny
     public String ExecuteMethodeModelView(HttpServletRequest req, Object[] argumentArgs) throws Exception {
         try {
@@ -92,7 +92,7 @@ public class ClassMethodUrl {
             } else {
                 throw new Exception("le type de retour doit etre de type model view");
             }
-
+            
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
