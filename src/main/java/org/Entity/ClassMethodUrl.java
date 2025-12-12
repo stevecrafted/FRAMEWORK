@@ -19,7 +19,7 @@ public class ClassMethodUrl {
     // Supportena
     // Miexiste ve le methode
     // Request mapping dia iray iany
-    
+
     public HttpMethod getHttpMethod() {
         return httpMethod;
     }
@@ -69,7 +69,7 @@ public class ClassMethodUrl {
 
         return "";
     }
-    
+
     // Mi execute anle methode raha model view no averiny
     public String ExecuteMethodeModelView(HttpServletRequest req, Object[] argumentArgs) throws Exception {
         try {
@@ -92,12 +92,27 @@ public class ClassMethodUrl {
             } else {
                 throw new Exception("le type de retour doit etre de type model view");
             }
-            
+
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
         }
 
         return "";
+    }
+
+    /**
+     * Sprint 9 : Exécute la méthode et retourne l'objet brut
+     * Utilisé pour les réponses JSON
+     */
+    public Object executeMethod(Object... args) throws Exception {
+        Object instance = this.Class.getDeclaredConstructor().newInstance();
+        return this.Method.invoke(instance, args);
+    }
+
+    @Override
+    public String toString() {
+        return "ClassMethodUrl [Class=" + Class.getName() + ",.Method=" + Method.getName()
+                + ", httpMethod=" + httpMethod + "]";
     }
 }

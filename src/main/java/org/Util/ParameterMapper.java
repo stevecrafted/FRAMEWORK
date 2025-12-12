@@ -9,15 +9,12 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.lang.reflect.Type;
-import java.time.LocalDate;
+import java.util.Map; 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Parameter; 
 
 public class ParameterMapper {
 
@@ -139,10 +136,8 @@ public class ParameterMapper {
              * 
              * "id" = [12]
              * "d.name" = ["Info"]
-             */
-            
-            // Sprint 8 bis - Gestion des tableaux au niveau racine
-            // Exemple: e[0].name=Alice&e[1].name=Bob
+             */ 
+            // Eto izy raha controlleur(Employe[] e)
             if (paramType.isArray()) {
                 Map<Integer, Map<String, String>> arrayData = extractArrayParameters(parametre, paramName);
                 
@@ -154,8 +149,10 @@ public class ParameterMapper {
                     methodArgs[i] = array;
                     continue;
                 }
+                
             }
             
+            // Eto izy raha controlleur(Employe e)
             if (!Utils.isPrimitive(paramType)) {
                 // stocker les paramètres qui concernent cet objet
                 Map<String, String> filtered = new HashMap<>();

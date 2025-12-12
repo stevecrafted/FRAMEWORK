@@ -1,12 +1,14 @@
 org\annotation\AnnotationMethode.class
 org\annotation\RequestMapping.class
+org\Entity\JsonResponse.class
 org\annotation\GetMapping.class
 org\Util\CmuMapperUtils\Utils.class
+org\Util\JsonConverter.class
+org\annotation\Json.class
 org\custom\CustomReflections.class
 org\annotation\AnnotationRequestParam.class
 org\Entity\HttpMethod.class
 org\annotation\PostMapping.class
-org\FrontServlet.class
 org\Util\CmuUtils.class
 org\Entity\ModelView.class
 org\annotation\AnnotationContoller.class
