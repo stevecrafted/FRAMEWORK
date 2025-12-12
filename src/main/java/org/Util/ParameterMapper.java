@@ -2,17 +2,22 @@ package org.Util;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.annotation.AnnotationRequestParam;
+
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.lang.reflect.Type;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 
 public class ParameterMapper {
 
-    public static Object[] mapParameters(Parameter[] methodParameters, HttpServletRequest req, Method method) {
+    public static Object[] mapParameters(Parameter[] methodParameters, HttpServletRequest req, Method method)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+            NoSuchMethodException, SecurityException {
         Object[] methodArgs = new Object[methodParameters.length];
 
         System.out.println(methodParameters.length + " parametre(s) trouve(s)");
@@ -81,9 +86,8 @@ public class ParameterMapper {
              * Sprint 6 bis
              * Raha mampiasa annotation @RequestParam dia matchena ilay valeur
              */
-            if (param.isAnnotationPresent(org.annotation.AnnotationRequestParam.class)) {
-                org.annotation.AnnotationRequestParam requestParamAnnotation = param
-                        .getAnnotation(org.annotation.AnnotationRequestParam.class);
+            if (param.isAnnotationPresent(AnnotationRequestParam.class)) {
+                AnnotationRequestParam requestParamAnnotation = param.getAnnotation(AnnotationRequestParam.class);
                 String requestParamName = requestParamAnnotation.value();
                 String requestParamValue = req.getParameter(requestParamName);
 
@@ -96,9 +100,127 @@ public class ParameterMapper {
             } else {
                 System.out.println("Parametre " + paramName + " non trouve dans la requete");
             }
+
+            /*
+             * Sprint 8 bis
+             * sprintHuitBis(Employe e)
+             * requete: e.name = zavatra
+             * e.dept[0].name = zavatra
+             *
+             * Afaka tonga dia jerena ao am paramType raha tsy objet
+             * Primitive le parametre (string, int, Boolean, etc.)
+             * Verifiena raha misy "." ao anatinle requete (Post na Get)
+             * 
+             * Raha misy dia :
+             * alaina ny eo alohanle "."
+             * 
+             * - jerena raha misy mitovy anarana amle izy ao anaty
+             * methode anle controlleur
+             * - Micréer instance anle Objet iny
+             * - setena alaina ny ao ariana ".name"
+             * 
+             * - jerena raha misy attribut otraniny ao amle Objet
+             * setena
+             * 
+             * Iny objet iny no alefa ao aminy controlleur
+             */
+            Map<String, String[]> parametre = req.getParameterMap();
+            /*
+             * renvoie un truc de type
+             * "e.name" = ["John"],
+             * "e.departement[0].name" = ["IT"],
+             * "e.departement[1].name" = ["HR"],
+             * 
+             * "id" = [12]
+             * "d.name" = ["Info"]
+             */
+            if (!isPrimitive(paramType)) {
+                // stocker les paramètres qui concernent cet objet
+                Map<String, String> filtered = new HashMap<>();
+
+                for (Map.Entry<String, String[]> entry : parametre.entrySet()) {
+                    String parameterKey = entry.getKey();
+                    String[] parameterValue = entry.getValue();
+
+                    System.out.println("parameterKey : " + parameterKey);
+                    System.out.println("paramName : " + paramName);
+
+                    if (parameterKey.startsWith(paramName + ".")) {
+                        filtered.put(parameterKey.substring(paramName.length() + 1), parameterValue[0]);
+
+                        for (String value : parameterValue) {
+                            System.out.println("value : " + value);
+                        }
+                    }
+
+                }
+
+                if (!filtered.isEmpty()) {
+                    System.out.println("-> Paramètre objet détecté : " + paramName);
+                    System.out.println("   " + filtered.size() + " champs trouvés pour " + paramName);
+
+                    Object instance = populateObject(paramType, filtered);
+                    methodArgs[i] = instance;
+                    continue;
+                }
+            }
+
         }
 
         return methodArgs;
+
+    }
+
+    private static Object populateObject(Class<?> clazz, Map<String, String> values)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+            NoSuchMethodException, SecurityException {
+        try {
+            /*
+             * Eto mahazo Employee de le map String, String :
+             * "name" = ["John"],
+             * "departement[0].name" = ["IT"],
+             * "departement[1].name" = ["HR"],
+             * 
+             * * "departement[1].manager.parent.name" = ["Papi drac"],
+             */
+            Object isntance = clazz.getDeclaredConstructor().newInstance();
+
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                String paramKey = entry.getKey();
+                String paramValue = entry.getValue();
+
+                // Eto izy raha ohatra ka e.name = drac
+                if (!paramKey.contains(".")) {
+                    try {
+                        var field = clazz.getDeclaredField(paramKey);
+                        field.setAccessible(true);
+                        field.set(isntance, paramValue);
+                    } catch (NoSuchFieldException e) {
+                        System.out.println("Champ inconnu: " + paramKey);
+                    }
+                } else {
+                    // Raha misy oe e.departement[0].name = transylvanie
+                    // Raha misy oe e.departement[0].manager.parent.name = papi drac
+                    var field = clazz.getDeclaredField(paramKey);
+                    Class<?> underClassType = field.getType();
+
+                    if (!underClassType.isPrimitive()) {
+                        Object underInstance = underClassType.getDeclaredConstructor().newInstance();
+
+
+                    }
+                }
+            }
+
+            return isntance;
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors du mapping objet", e);
+        }
+    }
+
+    private static boolean isPrimitive(Class<?> type) {
+        return (type.isPrimitive() || type.isInstance(String.class) || Number.class.isAssignableFrom(type)
+                || type == Boolean.class);
     }
 
     /*
@@ -121,9 +243,11 @@ public class ParameterMapper {
 
         return false;
     }
-    
+
     /*
-     * Methode manala any parametre ao amle Controlleur Map String,String
+     * Methode manala any valeur anle parametre ao anaty requetes
+     * Dia par rapport amininy valeur reny no icréena anle Map String, String vaovao
+     * 
      * Micréer Map vaovao aminy le Map taloha
      */
     private static Map<String, String> extractAllParameters(HttpServletRequest req) {

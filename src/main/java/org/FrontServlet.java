@@ -59,14 +59,13 @@ public class FrontServlet extends HttpServlet {
             if (cmu != null) { 
                 Method methode = cmu.getMyMethod();
                 Parameter[] methodParameters = methode.getParameters();
-                Method method = cmu.getMyMethod();
 
                 /**
                  * Sprint 6 : Matching des parametres entre l'url get ou
                  * post par formulaire avec les attributs
                  * de la methode
                  */
-                Object[] methodArgs = ParameterMapper.mapParameters(methodParameters, req, method);
+                Object[] methodArgs = ParameterMapper.mapParameters(methodParameters, req, methode);
 
                 printToClient(resp, "Cette url existe dans la classe " + cmu.getMyClass() + " dans la methode "
                         + cmu.getMyMethod());
