@@ -1,6 +1,7 @@
 org\annotation\AnnotationMethode.class
 org\annotation\RequestMapping.class
 org\annotation\GetMapping.class
+org\Util\CmuMapperUtils\Utils.class
 org\custom\CustomReflections.class
 org\annotation\AnnotationRequestParam.class
 org\Entity\HttpMethod.class

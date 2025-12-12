@@ -3,11 +3,16 @@ package org.Util;
 import javax.servlet.http.HttpServletRequest;
 
 import org.annotation.AnnotationRequestParam;
+import org.Util.CmuMapperUtils.Utils;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.lang.reflect.Type;
+import java.time.LocalDate;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -183,38 +188,100 @@ public class ParameterMapper {
              * 
              * * "departement[1].manager.parent.name" = ["Papi drac"],
              */
-            Object isntance = clazz.getDeclaredConstructor().newInstance();
+            Object instance = clazz.getDeclaredConstructor().newInstance();
 
             for (Map.Entry<String, String> entry : values.entrySet()) {
                 String paramKey = entry.getKey();
                 String paramValue = entry.getValue();
 
-                // Eto izy raha ohatra ka e.name = drac
-                if (!paramKey.contains(".")) {
-                    try {
-                        var field = clazz.getDeclaredField(paramKey);
-                        field.setAccessible(true);
-                        field.set(isntance, paramValue);
-                    } catch (NoSuchFieldException e) {
-                        System.out.println("Champ inconnu: " + paramKey);
-                    }
-                } else {
-                    // Raha misy oe e.departement[0].name = transylvanie
-                    // Raha misy oe e.departement[0].manager.parent.name = papi drac
-                    var field = clazz.getDeclaredField(paramKey);
-                    Class<?> underClassType = field.getType();
-
-                    if (!underClassType.isPrimitive()) {
-                        Object underInstance = underClassType.getDeclaredConstructor().newInstance();
-
-
-                    }
-                }
+                populateRecursive(instance, paramKey, paramValue);
             }
 
-            return isntance;
+            return instance;
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors du mapping objet", e);
+        }
+    }
+
+    private static void populateRecursive(Object currentObj, String key, String value) throws Exception {
+
+        // Exemple : departement[0].manager.name
+        String[] parts = key.split("\\.", 2);
+
+        String currentPart = parts[0]; // "departement[0]"
+        String remaining = (parts.length > 1 ? parts[1] : null);
+
+        // Extraire nom + index
+        String fieldName = Utils.extractFieldName(currentPart); // → "departement"
+        Integer index = Utils.extractIndex(currentPart); // → 0 ou null
+
+        System.out.println(" FieldName : " + fieldName);
+        Field field = currentObj.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+
+        Class<?> fieldType = field.getType();
+        Object fieldValue = field.get(currentObj);
+
+        // ============================================================
+        // 1. CAS LISTE (departement[0]...)
+        // ============================================================
+        if (List.class.isAssignableFrom(fieldType)) {
+
+            if (fieldValue == null) {
+                fieldValue = new ArrayList<>();
+                field.set(currentObj, fieldValue);
+            }
+            List list = (List) fieldValue;
+
+            // Déterminer type des éléments de la liste
+            Class<?> elementType = Utils.getListElementType(field);
+
+            // Agrandir la liste si nécessaire
+            while (list.size() <= index) {
+                list.add(null);
+            }
+
+            Object element = list.get(index);
+            if (element == null) {
+                element = elementType.getDeclaredConstructor().newInstance();
+                list.set(index, element);
+            }
+
+            if (remaining == null) {
+                // affectation finale
+                list.set(index, Utils.convert(value, elementType));
+                return;
+            }
+
+            // Récursion pour la suite du chemin
+            populateRecursive(element, remaining, value);
+            return;
+        }
+
+        // ============================================================
+        // 2. CAS OBJET NON PRIMITIF (manager, parent...)
+        // ============================================================
+        if (!isPrimitive(fieldType)) {
+
+            if (fieldValue == null) {
+                fieldValue = fieldType.getDeclaredConstructor().newInstance();
+                field.set(currentObj, fieldValue);
+            }
+
+            if (remaining == null) {
+                field.set(currentObj, Utils.convert(value, fieldType));
+                return;
+            }
+
+            populateRecursive(fieldValue, remaining, value);
+            return;
+        }
+
+        // ============================================================
+        // 3. CAS FINAL : champ simple (name, age, city, ...)
+        // ============================================================
+        if (remaining == null) {
+            field.set(currentObj, Utils.convert(value, fieldType));
         }
     }
 
