@@ -13,15 +13,18 @@ import java.util.Map;
 import java.util.HashMap;
 
 import org.Entity.ClassMethodUrl;
+import org.Entity.JsonResponse;
 import org.Entity.ModelView;
 import org.Util.CmuUtils;
+import org.Util.JsonConverter;
 import org.Util.ParameterMapper;
+import org.annotation.Json;
 import org.custom.CustomReflections;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
-public class FrontServlet extends HttpServlet { 
+public class FrontServlet extends HttpServlet {
 
     private RequestDispatcher defaultDispatcher;
     private CustomReflections reflections;
@@ -32,31 +35,32 @@ public class FrontServlet extends HttpServlet {
         defaultDispatcher = getServletContext().getNamedDispatcher("default");
 
         reflections = new CustomReflections(
-                "org.example"
-        );
-        
+                "org.example");
+
         // Sauvegardena anaty classeMethodeUrl daolo izay mampiasa anle Annotation
         // namboarina
         System.out.println("---------- Sauvegarde des url ----------");
         CmuUtils.saveCmuList(reflections, urlMappings);
-        
+
         ServletContext context = getServletContext();
         context.setAttribute("urlMappings", urlMappings);
     }
-    
+
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getRequestURI().substring(req.getContextPath().length());
         ClassMethodUrl cmu;
-        
-        try {   
-            // Jerena raha misy ao amle Url mapping le url miditra io 
+
+        try {
+            // Jerena raha misy ao amle Url mapping le url miditra io
             cmu = CmuUtils.findMapping(path, urlMappings, req);
 
             resp.setContentType("text/plain; charset=UTF-8");
-            resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
             
-            if (cmu != null) { 
+            resp.getWriter().write("ETU003861" + "\n");
+            resp.getWriter().write("FrontServlet a reçu : " + req.getRequestURL() + "\n");
+
+            if (cmu != null) {
                 Method methode = cmu.getMyMethod();
                 Parameter[] methodParameters = methode.getParameters();
 
@@ -69,6 +73,12 @@ public class FrontServlet extends HttpServlet {
 
                 printToClient(resp, "Cette url existe dans la classe " + cmu.getMyClass() + " dans la methode "
                         + cmu.getMyMethod());
+
+                // Vérifier si la méthode a l'annotation @Json
+                boolean isJsonResponse = methode.isAnnotationPresent(Json.class);
+                if (isJsonResponse) {
+                    handleJsonResponse(resp, cmu, methodArgs);
+                }
 
                 // Exécution selon le type de retour
                 if (cmu.getMyMethod().getReturnType() == String.class) {
@@ -103,7 +113,45 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Sprint 9 : Gère les réponses JSON avec l'annotation @Json
+     */
+    private void handleJsonResponse(HttpServletResponse resp, ClassMethodUrl cmu, Object[] methodArgs)
+            throws Exception {
+        
+        resp.setContentType("application/json; charset=UTF-8");
+
+        try {
+            // Exécuter la méthode du contrôleur
+            Object result = cmu.executeMethod(methodArgs);
+
+            // Créer la réponse JSON standardisée
+            JsonResponse jsonResponse = JsonResponse.success(result);
+
+            // Convertir en JSON et envoyer
+            String json = JsonConverter.toJson(jsonResponse);
+            resp.getWriter().write(json);
+
+            System.out.println("Réponse JSON envoyée : " + json);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendJsonError(resp, e.getMessage(), 500);
+        }
+    }
+
+    private void sendJsonError(HttpServletResponse resp, String message, int code) throws IOException {
+        resp.setContentType("application/json; charset=UTF-8");
+        resp.setStatus(code);
+
+        JsonResponse errorResponse = JsonResponse.error(message, code);
+        String json = JsonConverter.toJson(errorResponse);
+
+        resp.getWriter().write(json);
+    }
+
     public void printToClient(HttpServletResponse resp, String message) throws IOException {
         resp.getWriter().write(message);
     }
+
 }
