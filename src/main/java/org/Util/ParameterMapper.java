@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.lang.reflect.Type;
 import java.time.LocalDate;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,7 +44,7 @@ public class ParameterMapper {
              * Methode mitsatsaka :)
              */
             if (Map.class.isAssignableFrom(paramType)) {
-                if (isMapStringString(param)) {
+                if (Utils.isMapStringString(param)) {
                     Map<String, String> dataMap = extractAllParameters(req);
                     methodArgs[i] = dataMap;
                     System.out.println("Parametre " + paramName + " (Map<String, String>) mis en place avec "
@@ -65,7 +66,7 @@ public class ParameterMapper {
              */
             String paramValue = req.getParameter(paramName);
             if (paramValue != null) {
-                methodArgs[i] = convertParameter(paramValue, param.getType(), paramName);
+                methodArgs[i] = Utils.convertParameter(paramValue, param.getType(), paramName);
                 continue;
             }
 
@@ -82,7 +83,7 @@ public class ParameterMapper {
                 Map<String, String> pathVars = (Map<String, String>) attr;
                 String raw = pathVars.get(paramName);
                 if (raw != null) {
-                    methodArgs[i] = convertParameter(raw, param.getType(), paramName);
+                    methodArgs[i] = Utils.convertParameter(raw, param.getType(), paramName);
                     continue;
                 }
             }
@@ -97,7 +98,7 @@ public class ParameterMapper {
                 String requestParamValue = req.getParameter(requestParamName);
 
                 if (requestParamValue != null) {
-                    methodArgs[i] = convertParameter(requestParamValue, param.getType(), requestParamName);
+                    methodArgs[i] = Utils.convertParameter(requestParamValue, param.getType(), requestParamName);
                     continue;
                 } else {
                     System.out.println("Parametre " + requestParamName + " non trouve dans la requete");
@@ -139,7 +140,23 @@ public class ParameterMapper {
              * "id" = [12]
              * "d.name" = ["Info"]
              */
-            if (!isPrimitive(paramType)) {
+            
+            // Sprint 8 bis - Gestion des tableaux au niveau racine
+            // Exemple: e[0].name=Alice&e[1].name=Bob
+            if (paramType.isArray()) {
+                Map<Integer, Map<String, String>> arrayData = extractArrayParameters(parametre, paramName);
+                
+                if (!arrayData.isEmpty()) {
+                    System.out.println("-> Paramètre tableau détecté : " + paramName + "[]");
+                    System.out.println("   " + arrayData.size() + " élément(s) trouvé(s)");
+                    
+                    Object array = populateArray(paramType.getComponentType(), arrayData);
+                    methodArgs[i] = array;
+                    continue;
+                }
+            }
+            
+            if (!Utils.isPrimitive(paramType)) {
                 // stocker les paramètres qui concernent cet objet
                 Map<String, String> filtered = new HashMap<>();
 
@@ -223,6 +240,46 @@ public class ParameterMapper {
         Object fieldValue = field.get(currentObj);
 
         // ============================================================
+        // CAS TABLEAU (Employee[], String[], etc.)
+        // ============================================================
+        if (fieldType.isArray()) {
+            Class<?> elementType = fieldType.getComponentType();
+
+            int arrayLength = index != null ? index + 1 : 1;
+
+            Object array = fieldValue;
+            if (array == null) {
+                array = Array.newInstance(elementType, arrayLength);
+            } else {
+                int currentLength = Array.getLength(array);
+                if (arrayLength > currentLength) {
+                    // créer un nouveau tableau plus grand et copier l'ancien
+                    Object newArray = Array.newInstance(elementType, arrayLength);
+                    System.arraycopy(array, 0, newArray, 0, currentLength);
+                    array = newArray;
+                }
+            }
+
+            // Créer instance si nécessaire
+            Object element = Array.get(array, index != null ? index : 0);
+            if (element == null && !Utils.isPrimitive(elementType)) {
+                element = elementType.getDeclaredConstructor().newInstance();
+                Array.set(array, index != null ? index : 0, element);
+            }
+
+            // Affectation finale ou récursion
+            if (remaining == null) {
+                Array.set(array, index != null ? index : 0, Utils.convert(value, elementType));
+            } else {
+                populateRecursive(element, remaining, value);
+            }
+
+            // Mettre à jour le champ dans l'objet
+            field.set(currentObj, array);
+            return;
+        }
+
+        // ============================================================
         // 1. CAS LISTE (departement[0]...)
         // ============================================================
         if (List.class.isAssignableFrom(fieldType)) {
@@ -261,7 +318,7 @@ public class ParameterMapper {
         // ============================================================
         // 2. CAS OBJET NON PRIMITIF (manager, parent...)
         // ============================================================
-        if (!isPrimitive(fieldType)) {
+        if (!Utils.isPrimitive(fieldType)) {
 
             if (fieldValue == null) {
                 fieldValue = fieldType.getDeclaredConstructor().newInstance();
@@ -285,30 +342,89 @@ public class ParameterMapper {
         }
     }
 
-    private static boolean isPrimitive(Class<?> type) {
-        return (type.isPrimitive() || type.isInstance(String.class) || Number.class.isAssignableFrom(type)
-                || type == Boolean.class);
-    }
-
-    /*
-     * Methode ahafantarana oe String String ve ny parametre
-     * iray
+    /**
+     * Extrait les paramètres d'un tableau
+     * Exemple: e[0].name=Alice, e[1].name=Bob, e[0].age=25
+     * Retourne: {0 -> {name=Alice, age=25}, 1 -> {name=Bob}}
      */
-    private static boolean isMapStringString(Parameter parameter) {
-        Type genericType = parameter.getParameterizedType();
-
-        if (genericType instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) genericType;
-            Type[] typeArguments = parameterizedType.getActualTypeArguments();
-
-            if (typeArguments.length == 2
-                    && typeArguments[0] == String.class
-                    && typeArguments[1] == String.class) {
-                return true;
+    private static Map<Integer, Map<String, String>> extractArrayParameters(
+            Map<String, String[]> allParams, 
+            String paramName) {
+        
+        Map<Integer, Map<String, String>> result = new HashMap<>();
+        
+        for (Map.Entry<String, String[]> entry : allParams.entrySet()) {
+            String key = entry.getKey();
+            
+            // Vérifier si le paramètre correspond au pattern: paramName[index]...
+            if (key.startsWith(paramName + "[")) {
+                try {
+                    // Extraire l'index et le reste du chemin
+                    String afterParamName = key.substring(paramName.length());
+                    Integer index = Utils.extractIndex(afterParamName);
+                    
+                    if (index != null) {
+                        String fieldPath = afterParamName.substring(afterParamName.indexOf("]") + 1);
+                        
+                        // Enlever le "." au début si présent
+                        if (fieldPath.startsWith(".")) {
+                            fieldPath = fieldPath.substring(1);
+                        }
+                        
+                        // Créer la map pour cet index si elle n'existe pas
+                        if (!result.containsKey(index)) {
+                            result.put(index, new HashMap<>());
+                        }
+                        
+                        // Ajouter le champ et sa valeur
+                        result.get(index).put(fieldPath, entry.getValue()[0]);
+                        
+                        System.out.println("  - Extraction : " + paramName + "[" + index + "]." + fieldPath 
+                                         + " = " + entry.getValue()[0]);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Erreur lors de l'extraction de : " + key);
+                }
             }
         }
+        
+        return result;
+    }
 
-        return false;
+    /**
+     * Crée un tableau d'objets à partir des données extraites
+     */
+    private static Object populateArray(Class<?> componentType, Map<Integer, Map<String, String>> arrayData)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, 
+                   InvocationTargetException, NoSuchMethodException, SecurityException {
+        
+        // Trouver la taille maximale du tableau
+        int maxIndex = arrayData.keySet().stream().max(Integer::compareTo).orElse(0);
+        Object array = Array.newInstance(componentType, maxIndex + 1);
+        
+        // Remplir chaque élément du tableau
+        for (Map.Entry<Integer, Map<String, String>> entry : arrayData.entrySet()) {
+            int index = entry.getKey();
+            Map<String, String> objectFields = entry.getValue();
+            
+            Object element;
+            if (Utils.isPrimitive(componentType)) {
+                // Si c'est un type primitif, prendre directement la valeur
+                if (objectFields.size() == 1) {
+                    String value = objectFields.values().iterator().next();
+                    element = Utils.convert(value, componentType);
+                } else {
+                    element = null;
+                }
+            } else {
+                // Si c'est un objet, utiliser populateObject
+                element = populateObject(componentType, objectFields);
+            }
+            
+            Array.set(array, index, element);
+        }
+        
+        return array;
     }
 
     /*
@@ -343,41 +459,4 @@ public class ParameterMapper {
         return dataMap;
     }
 
-    private static Object convertParameter(String value, Class<?> targetType, String paramName) {
-        try {
-            Object convertedValue;
-
-            if (targetType == int.class || targetType == Integer.class) {
-                convertedValue = Integer.parseInt(value);
-
-            } else if (targetType == double.class || targetType == Double.class) {
-                convertedValue = Double.parseDouble(value);
-
-            } else if (targetType == float.class || targetType == Float.class) {
-                convertedValue = Float.parseFloat(value);
-
-            } else if (targetType == long.class || targetType == Long.class) {
-                convertedValue = Long.parseLong(value);
-
-            } else if (targetType == boolean.class || targetType == Boolean.class) {
-                convertedValue = Boolean.parseBoolean(value);
-
-            } else if (targetType == String.class) {
-                convertedValue = value;
-
-            } else {
-                System.out.println("Type non supporte pour " + paramName + ", retour en String");
-                convertedValue = value;
-            }
-
-            System.out.println("Parametre " + paramName + " mis en place avec la valeur : " + value);
-            return convertedValue;
-
-        } catch (NumberFormatException e) {
-            System.err.println("Erreur de conversion pour le parametre " + paramName +
-                    " avec la valeur '" + value + "'");
-            throw new IllegalArgumentException(
-                    "Impossible de convertir le parametre " + paramName + " en " + targetType.getSimpleName(), e);
-        }
-    }
 }
