@@ -2,17 +2,28 @@ package org.Util;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.annotation.AnnotationRequestParam;
+import org.Util.CmuMapperUtils.Utils;
+
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.lang.reflect.Type;
+import java.time.LocalDate;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 
 public class ParameterMapper {
 
-    public static Object[] mapParameters(Parameter[] methodParameters, HttpServletRequest req, Method method) {
+    public static Object[] mapParameters(Parameter[] methodParameters, HttpServletRequest req, Method method)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+            NoSuchMethodException, SecurityException {
         Object[] methodArgs = new Object[methodParameters.length];
 
         System.out.println(methodParameters.length + " parametre(s) trouve(s)");
@@ -33,7 +44,7 @@ public class ParameterMapper {
              * Methode mitsatsaka :)
              */
             if (Map.class.isAssignableFrom(paramType)) {
-                if (isMapStringString(param)) {
+                if (Utils.isMapStringString(param)) {
                     Map<String, String> dataMap = extractAllParameters(req);
                     methodArgs[i] = dataMap;
                     System.out.println("Parametre " + paramName + " (Map<String, String>) mis en place avec "
@@ -55,7 +66,7 @@ public class ParameterMapper {
              */
             String paramValue = req.getParameter(paramName);
             if (paramValue != null) {
-                methodArgs[i] = convertParameter(paramValue, param.getType(), paramName);
+                methodArgs[i] = Utils.convertParameter(paramValue, param.getType(), paramName);
                 continue;
             }
 
@@ -72,7 +83,7 @@ public class ParameterMapper {
                 Map<String, String> pathVars = (Map<String, String>) attr;
                 String raw = pathVars.get(paramName);
                 if (raw != null) {
-                    methodArgs[i] = convertParameter(raw, param.getType(), paramName);
+                    methodArgs[i] = Utils.convertParameter(raw, param.getType(), paramName);
                     continue;
                 }
             }
@@ -81,14 +92,13 @@ public class ParameterMapper {
              * Sprint 6 bis
              * Raha mampiasa annotation @RequestParam dia matchena ilay valeur
              */
-            if (param.isAnnotationPresent(org.annotation.AnnotationRequestParam.class)) {
-                org.annotation.AnnotationRequestParam requestParamAnnotation = param
-                        .getAnnotation(org.annotation.AnnotationRequestParam.class);
+            if (param.isAnnotationPresent(AnnotationRequestParam.class)) {
+                AnnotationRequestParam requestParamAnnotation = param.getAnnotation(AnnotationRequestParam.class);
                 String requestParamName = requestParamAnnotation.value();
                 String requestParamValue = req.getParameter(requestParamName);
 
                 if (requestParamValue != null) {
-                    methodArgs[i] = convertParameter(requestParamValue, param.getType(), requestParamName);
+                    methodArgs[i] = Utils.convertParameter(requestParamValue, param.getType(), requestParamName);
                     continue;
                 } else {
                     System.out.println("Parametre " + requestParamName + " non trouve dans la requete");
@@ -96,34 +106,331 @@ public class ParameterMapper {
             } else {
                 System.out.println("Parametre " + paramName + " non trouve dans la requete");
             }
+
+            /*
+             * Sprint 8 bis
+             * sprintHuitBis(Employe e)
+             * requete: e.name = zavatra
+             * e.dept[0].name = zavatra
+             *
+             * Afaka tonga dia jerena ao am paramType raha tsy objet
+             * Primitive le parametre (string, int, Boolean, etc.)
+             * Verifiena raha misy "." ao anatinle requete (Post na Get)
+             * 
+             * Raha misy dia :
+             * alaina ny eo alohanle "."
+             * 
+             * - jerena raha misy mitovy anarana amle izy ao anaty
+             * methode anle controlleur
+             * - Micréer instance anle Objet iny
+             * - setena alaina ny ao ariana ".name"
+             * 
+             * - jerena raha misy attribut otraniny ao amle Objet
+             * setena
+             * 
+             * Iny objet iny no alefa ao aminy controlleur
+             */
+            Map<String, String[]> parametre = req.getParameterMap();
+            /*
+             * renvoie un truc de type
+             * "e.name" = ["John"],
+             * "e.departement[0].name" = ["IT"],
+             * "e.departement[1].name" = ["HR"],
+             * 
+             * "id" = [12]
+             * "d.name" = ["Info"]
+             */
+            
+            // Sprint 8 bis - Gestion des tableaux au niveau racine
+            // Exemple: e[0].name=Alice&e[1].name=Bob
+            if (paramType.isArray()) {
+                Map<Integer, Map<String, String>> arrayData = extractArrayParameters(parametre, paramName);
+                
+                if (!arrayData.isEmpty()) {
+                    System.out.println("-> Paramètre tableau détecté : " + paramName + "[]");
+                    System.out.println("   " + arrayData.size() + " élément(s) trouvé(s)");
+                    
+                    Object array = populateArray(paramType.getComponentType(), arrayData);
+                    methodArgs[i] = array;
+                    continue;
+                }
+            }
+            
+            if (!Utils.isPrimitive(paramType)) {
+                // stocker les paramètres qui concernent cet objet
+                Map<String, String> filtered = new HashMap<>();
+
+                for (Map.Entry<String, String[]> entry : parametre.entrySet()) {
+                    String parameterKey = entry.getKey();
+                    String[] parameterValue = entry.getValue();
+
+                    System.out.println("parameterKey : " + parameterKey);
+                    System.out.println("paramName : " + paramName);
+
+                    if (parameterKey.startsWith(paramName + ".")) {
+                        filtered.put(parameterKey.substring(paramName.length() + 1), parameterValue[0]);
+
+                        for (String value : parameterValue) {
+                            System.out.println("value : " + value);
+                        }
+                    }
+
+                }
+
+                if (!filtered.isEmpty()) {
+                    System.out.println("-> Paramètre objet détecté : " + paramName);
+                    System.out.println("   " + filtered.size() + " champs trouvés pour " + paramName);
+
+                    Object instance = populateObject(paramType, filtered);
+                    methodArgs[i] = instance;
+                    continue;
+                }
+            }
+
         }
 
         return methodArgs;
+
     }
 
-    /*
-     * Methode ahafantarana oe String String ve ny parametre
-     * iray
-     */
-    private static boolean isMapStringString(Parameter parameter) {
-        Type genericType = parameter.getParameterizedType();
+    private static Object populateObject(Class<?> clazz, Map<String, String> values)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+            NoSuchMethodException, SecurityException {
+        try {
+            /*
+             * Eto mahazo Employee de le map String, String :
+             * "name" = ["John"],
+             * "departement[0].name" = ["IT"],
+             * "departement[1].name" = ["HR"],
+             * 
+             * * "departement[1].manager.parent.name" = ["Papi drac"],
+             */
+            Object instance = clazz.getDeclaredConstructor().newInstance();
 
-        if (genericType instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) genericType;
-            Type[] typeArguments = parameterizedType.getActualTypeArguments();
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                String paramKey = entry.getKey();
+                String paramValue = entry.getValue();
 
-            if (typeArguments.length == 2
-                    && typeArguments[0] == String.class
-                    && typeArguments[1] == String.class) {
-                return true;
+                populateRecursive(instance, paramKey, paramValue);
             }
+
+            return instance;
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors du mapping objet", e);
+        }
+    }
+
+    private static void populateRecursive(Object currentObj, String key, String value) throws Exception {
+
+        // Exemple : departement[0].manager.name
+        String[] parts = key.split("\\.", 2);
+
+        String currentPart = parts[0]; // "departement[0]"
+        String remaining = (parts.length > 1 ? parts[1] : null);
+
+        // Extraire nom + index
+        String fieldName = Utils.extractFieldName(currentPart); // → "departement"
+        Integer index = Utils.extractIndex(currentPart); // → 0 ou null
+
+        System.out.println(" FieldName : " + fieldName);
+        Field field = currentObj.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+
+        Class<?> fieldType = field.getType();
+        Object fieldValue = field.get(currentObj);
+
+        // ============================================================
+        // CAS TABLEAU (Employee[], String[], etc.)
+        // ============================================================
+        if (fieldType.isArray()) {
+            Class<?> elementType = fieldType.getComponentType();
+
+            int arrayLength = index != null ? index + 1 : 1;
+
+            Object array = fieldValue;
+            if (array == null) {
+                array = Array.newInstance(elementType, arrayLength);
+            } else {
+                int currentLength = Array.getLength(array);
+                if (arrayLength > currentLength) {
+                    // créer un nouveau tableau plus grand et copier l'ancien
+                    Object newArray = Array.newInstance(elementType, arrayLength);
+                    System.arraycopy(array, 0, newArray, 0, currentLength);
+                    array = newArray;
+                }
+            }
+
+            // Créer instance si nécessaire
+            Object element = Array.get(array, index != null ? index : 0);
+            if (element == null && !Utils.isPrimitive(elementType)) {
+                element = elementType.getDeclaredConstructor().newInstance();
+                Array.set(array, index != null ? index : 0, element);
+            }
+
+            // Affectation finale ou récursion
+            if (remaining == null) {
+                Array.set(array, index != null ? index : 0, Utils.convert(value, elementType));
+            } else {
+                populateRecursive(element, remaining, value);
+            }
+
+            // Mettre à jour le champ dans l'objet
+            field.set(currentObj, array);
+            return;
         }
 
-        return false;
+        // ============================================================
+        // 1. CAS LISTE (departement[0]...)
+        // ============================================================
+        if (List.class.isAssignableFrom(fieldType)) {
+
+            if (fieldValue == null) {
+                fieldValue = new ArrayList<>();
+                field.set(currentObj, fieldValue);
+            }
+            List list = (List) fieldValue;
+
+            // Déterminer type des éléments de la liste
+            Class<?> elementType = Utils.getListElementType(field);
+
+            // Agrandir la liste si nécessaire
+            while (list.size() <= index) {
+                list.add(null);
+            }
+
+            Object element = list.get(index);
+            if (element == null) {
+                element = elementType.getDeclaredConstructor().newInstance();
+                list.set(index, element);
+            }
+
+            if (remaining == null) {
+                // affectation finale
+                list.set(index, Utils.convert(value, elementType));
+                return;
+            }
+
+            // Récursion pour la suite du chemin
+            populateRecursive(element, remaining, value);
+            return;
+        }
+
+        // ============================================================
+        // 2. CAS OBJET NON PRIMITIF (manager, parent...)
+        // ============================================================
+        if (!Utils.isPrimitive(fieldType)) {
+
+            if (fieldValue == null) {
+                fieldValue = fieldType.getDeclaredConstructor().newInstance();
+                field.set(currentObj, fieldValue);
+            }
+
+            if (remaining == null) {
+                field.set(currentObj, Utils.convert(value, fieldType));
+                return;
+            }
+
+            populateRecursive(fieldValue, remaining, value);
+            return;
+        }
+
+        // ============================================================
+        // 3. CAS FINAL : champ simple (name, age, city, ...)
+        // ============================================================
+        if (remaining == null) {
+            field.set(currentObj, Utils.convert(value, fieldType));
+        }
     }
-    
+
+    /**
+     * Extrait les paramètres d'un tableau
+     * Exemple: e[0].name=Alice, e[1].name=Bob, e[0].age=25
+     * Retourne: {0 -> {name=Alice, age=25}, 1 -> {name=Bob}}
+     */
+    private static Map<Integer, Map<String, String>> extractArrayParameters(
+            Map<String, String[]> allParams, 
+            String paramName) {
+        
+        Map<Integer, Map<String, String>> result = new HashMap<>();
+        
+        for (Map.Entry<String, String[]> entry : allParams.entrySet()) {
+            String key = entry.getKey();
+            
+            // Vérifier si le paramètre correspond au pattern: paramName[index]...
+            if (key.startsWith(paramName + "[")) {
+                try {
+                    // Extraire l'index et le reste du chemin
+                    String afterParamName = key.substring(paramName.length());
+                    Integer index = Utils.extractIndex(afterParamName);
+                    
+                    if (index != null) {
+                        String fieldPath = afterParamName.substring(afterParamName.indexOf("]") + 1);
+                        
+                        // Enlever le "." au début si présent
+                        if (fieldPath.startsWith(".")) {
+                            fieldPath = fieldPath.substring(1);
+                        }
+                        
+                        // Créer la map pour cet index si elle n'existe pas
+                        if (!result.containsKey(index)) {
+                            result.put(index, new HashMap<>());
+                        }
+                        
+                        // Ajouter le champ et sa valeur
+                        result.get(index).put(fieldPath, entry.getValue()[0]);
+                        
+                        System.out.println("  - Extraction : " + paramName + "[" + index + "]." + fieldPath 
+                                         + " = " + entry.getValue()[0]);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Erreur lors de l'extraction de : " + key);
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * Crée un tableau d'objets à partir des données extraites
+     */
+    private static Object populateArray(Class<?> componentType, Map<Integer, Map<String, String>> arrayData)
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException, 
+                   InvocationTargetException, NoSuchMethodException, SecurityException {
+        
+        // Trouver la taille maximale du tableau
+        int maxIndex = arrayData.keySet().stream().max(Integer::compareTo).orElse(0);
+        Object array = Array.newInstance(componentType, maxIndex + 1);
+        
+        // Remplir chaque élément du tableau
+        for (Map.Entry<Integer, Map<String, String>> entry : arrayData.entrySet()) {
+            int index = entry.getKey();
+            Map<String, String> objectFields = entry.getValue();
+            
+            Object element;
+            if (Utils.isPrimitive(componentType)) {
+                // Si c'est un type primitif, prendre directement la valeur
+                if (objectFields.size() == 1) {
+                    String value = objectFields.values().iterator().next();
+                    element = Utils.convert(value, componentType);
+                } else {
+                    element = null;
+                }
+            } else {
+                // Si c'est un objet, utiliser populateObject
+                element = populateObject(componentType, objectFields);
+            }
+            
+            Array.set(array, index, element);
+        }
+        
+        return array;
+    }
+
     /*
-     * Methode manala any parametre ao amle Controlleur Map String,String
+     * Methode manala any valeur anle parametre ao anaty requetes
+     * Dia par rapport amininy valeur reny no icréena anle Map String, String vaovao
+     * 
      * Micréer Map vaovao aminy le Map taloha
      */
     private static Map<String, String> extractAllParameters(HttpServletRequest req) {
@@ -152,41 +459,4 @@ public class ParameterMapper {
         return dataMap;
     }
 
-    private static Object convertParameter(String value, Class<?> targetType, String paramName) {
-        try {
-            Object convertedValue;
-
-            if (targetType == int.class || targetType == Integer.class) {
-                convertedValue = Integer.parseInt(value);
-
-            } else if (targetType == double.class || targetType == Double.class) {
-                convertedValue = Double.parseDouble(value);
-
-            } else if (targetType == float.class || targetType == Float.class) {
-                convertedValue = Float.parseFloat(value);
-
-            } else if (targetType == long.class || targetType == Long.class) {
-                convertedValue = Long.parseLong(value);
-
-            } else if (targetType == boolean.class || targetType == Boolean.class) {
-                convertedValue = Boolean.parseBoolean(value);
-
-            } else if (targetType == String.class) {
-                convertedValue = value;
-
-            } else {
-                System.out.println("Type non supporte pour " + paramName + ", retour en String");
-                convertedValue = value;
-            }
-
-            System.out.println("Parametre " + paramName + " mis en place avec la valeur : " + value);
-            return convertedValue;
-
-        } catch (NumberFormatException e) {
-            System.err.println("Erreur de conversion pour le parametre " + paramName +
-                    " avec la valeur '" + value + "'");
-            throw new IllegalArgumentException(
-                    "Impossible de convertir le parametre " + paramName + " en " + targetType.getSimpleName(), e);
-        }
-    }
 }
