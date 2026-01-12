@@ -5,6 +5,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 
@@ -24,6 +25,12 @@ import org.custom.CustomReflections;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
+// AJOUTEZ CETTE ANNOTATION ICI
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
+    maxFileSize = 1024 * 1024 * 10,       // 10MB
+    maxRequestSize = 1024 * 1024 * 50     // 50MB
+)
 public class FrontServlet extends HttpServlet {
 
     private RequestDispatcher defaultDispatcher;

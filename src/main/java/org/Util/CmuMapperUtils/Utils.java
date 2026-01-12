@@ -1,10 +1,18 @@
 package org.Util.CmuMapperUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 
 public class Utils {
 
@@ -96,8 +104,6 @@ public class Utils {
         }
     }
 
-    
-
     public static boolean isPrimitive(Class<?> type) {
         return (type.isPrimitive() || type.isInstance(String.class) || Number.class.isAssignableFrom(type)
                 || type == Boolean.class);
@@ -122,6 +128,95 @@ public class Utils {
         }
 
         return false;
+    }
+
+    /*
+     * Methode ahafantarana oe String byte[] ve ny parametre
+     * iray
+     */
+    public static boolean isMapStringByteArray(Parameter parameter) {
+        Type genericType = parameter.getParameterizedType();
+
+        if (!(genericType instanceof ParameterizedType)) {
+            return false;
+        }
+
+        ParameterizedType parameterizedType = (ParameterizedType) genericType;
+
+        // Vérifier que c'est bien un Map
+        if (!(parameterizedType.getRawType() instanceof Class)
+                || !Map.class.isAssignableFrom((Class<?>) parameterizedType.getRawType())) {
+            return false;
+        }
+
+        Type[] typeArguments = parameterizedType.getActualTypeArguments();
+
+        if (typeArguments.length != 2) {
+            return false;
+        }
+
+        // Key : String
+        if (typeArguments[0] != String.class) {
+            return false;
+        }
+
+        // Value : byte[]
+        if (typeArguments[1] instanceof Class) {
+            Class<?> valueClass = (Class<?>) typeArguments[1];
+            return valueClass.isArray() && valueClass.getComponentType() == byte.class;
+        }
+
+        return false;
+    }
+
+    /**
+     * Exemple simplifié de parsing multipart
+     * 
+     * @throws ServletException
+     */
+    public static Map<String, byte[]> extractFiles(HttpServletRequest req) throws IOException, ServletException {
+        Map<String, byte[]> filesMap = new HashMap<>();
+
+        for (Part part : req.getParts()) {
+            String fieldName = part.getName();
+            String originalFilename = getFilename(part);
+
+            if (originalFilename != null && !originalFilename.isEmpty()) {
+                try (InputStream input = part.getInputStream()) {
+                    byte[] content = input.readAllBytes();
+
+                    // Encoder : fieldName::originalFilename
+                    String mapKey = fieldName + "::" + originalFilename;
+                    filesMap.put(mapKey, content);
+
+                    System.out.println("Fichier extrait : " + originalFilename);
+                }
+            }
+        }
+
+        return filesMap;
+    }
+
+    private static String getFilename(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        if (contentDisposition == null)
+            return null;
+
+        for (String token : contentDisposition.split(";")) {
+            if (token.trim().startsWith("filename")) {
+                return token.substring(token.indexOf('=') + 2, token.length() - 1);
+            }
+        }
+        return null;
+    }
+
+    public static boolean isMultipart(HttpServletRequest req) {
+        if (req == null)
+            return false;
+
+        String contentType = req.getContentType();
+        return contentType != null &&
+                contentType.toLowerCase().startsWith("multipart/form-data");
     }
 
 }

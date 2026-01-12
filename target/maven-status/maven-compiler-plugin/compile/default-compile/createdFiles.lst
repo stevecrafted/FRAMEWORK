@@ -9,6 +9,7 @@ org\custom\CustomReflections.class
 org\annotation\AnnotationRequestParam.class
 org\Entity\HttpMethod.class
 org\annotation\PostMapping.class
+org\FrontServlet.class
 org\Util\CmuUtils.class
 org\Entity\ModelView.class
 org\annotation\AnnotationContoller.class
