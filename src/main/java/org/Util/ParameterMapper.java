@@ -1,5 +1,6 @@
 package org.Util;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.annotation.AnnotationRequestParam;
@@ -9,18 +10,19 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map; 
+import java.util.Map;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter; 
+import java.lang.reflect.Parameter;
 
 public class ParameterMapper {
 
     public static Object[] mapParameters(Parameter[] methodParameters, HttpServletRequest req, Method method)
             throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
-            NoSuchMethodException, SecurityException {
+            NoSuchMethodException, SecurityException, IOException, ServletException {
         Object[] methodArgs = new Object[methodParameters.length];
 
         System.out.println(methodParameters.length + " parametre(s) trouve(s)");
@@ -41,18 +43,51 @@ public class ParameterMapper {
              * Methode mitsatsaka :)
              */
             if (Map.class.isAssignableFrom(paramType)) {
+                System.out.println("Map aloa le parametre anh");
+
                 if (Utils.isMapStringString(param)) {
                     Map<String, String> dataMap = extractAllParameters(req);
                     methodArgs[i] = dataMap;
                     System.out.println("Parametre " + paramName + " (Map<String, String>) mis en place avec "
                             + dataMap.size() + " entree(s)");
                     continue;
-                } else {
+                }
+
+                /*
+                 * sprint 10
+                 * Map String, byte[]
+                 */
+                else if (Utils.isMapStringByteArray(param)) {
+                    System.out.println("String byte[] izy zany");
+
+                    // Verifiena raha : multipart/form-data
+                    if (!Utils.isMultipart(req)) {
+                        System.out.println("Tsy multipart lee");
+
+                        throw new RuntimeException(
+                                "Le paramètre '" + paramName +
+                                        "' requiert une requête multipart/form-data");
+                    }
+
+                    System.out.println("multipart le izy zany anh");
+
+                    Map<String, byte[]> data = Utils.extractFiles(req);
+                    System.out.println("Vita ny extraction zany anh");
+                    
+                    methodArgs[i] = data;
+                    
+                    System.out.println("Parametre " + paramName + " (Map<String, byte[]>) mis en place avec "
+                            + data.size() + " entree(s)");
+                    continue;
+                }
+
+                else {
                     System.out.println(
                             "Type Map non supporte pour " + paramName + " (seul Map<String, String> est accepte)");
                     methodArgs[i] = new HashMap<String, String>();
                     continue;
                 }
+
             }
 
             /*
@@ -136,22 +171,22 @@ public class ParameterMapper {
              * 
              * "id" = [12]
              * "d.name" = ["Info"]
-             */ 
+             */
             // Eto izy raha controlleur(Employe[] e)
             if (paramType.isArray()) {
                 Map<Integer, Map<String, String>> arrayData = extractArrayParameters(parametre, paramName);
-                
+
                 if (!arrayData.isEmpty()) {
                     System.out.println("-> Paramètre tableau détecté : " + paramName + "[]");
                     System.out.println("   " + arrayData.size() + " élément(s) trouvé(s)");
-                    
+
                     Object array = populateArray(paramType.getComponentType(), arrayData);
                     methodArgs[i] = array;
                     continue;
                 }
-                
+
             }
-            
+
             // Eto izy raha controlleur(Employe e)
             if (!Utils.isPrimitive(paramType)) {
                 // stocker les paramètres qui concernent cet objet
@@ -345,46 +380,46 @@ public class ParameterMapper {
      * Retourne: {0 -> {name=Alice, age=25}, 1 -> {name=Bob}}
      */
     private static Map<Integer, Map<String, String>> extractArrayParameters(
-            Map<String, String[]> allParams, 
+            Map<String, String[]> allParams,
             String paramName) {
-        
+
         Map<Integer, Map<String, String>> result = new HashMap<>();
-        
+
         for (Map.Entry<String, String[]> entry : allParams.entrySet()) {
             String key = entry.getKey();
-            
+
             // Vérifier si le paramètre correspond au pattern: paramName[index]...
             if (key.startsWith(paramName + "[")) {
                 try {
                     // Extraire l'index et le reste du chemin
                     String afterParamName = key.substring(paramName.length());
                     Integer index = Utils.extractIndex(afterParamName);
-                    
+
                     if (index != null) {
                         String fieldPath = afterParamName.substring(afterParamName.indexOf("]") + 1);
-                        
+
                         // Enlever le "." au début si présent
                         if (fieldPath.startsWith(".")) {
                             fieldPath = fieldPath.substring(1);
                         }
-                        
+
                         // Créer la map pour cet index si elle n'existe pas
                         if (!result.containsKey(index)) {
                             result.put(index, new HashMap<>());
                         }
-                        
+
                         // Ajouter le champ et sa valeur
                         result.get(index).put(fieldPath, entry.getValue()[0]);
-                        
-                        System.out.println("  - Extraction : " + paramName + "[" + index + "]." + fieldPath 
-                                         + " = " + entry.getValue()[0]);
+
+                        System.out.println("  - Extraction : " + paramName + "[" + index + "]." + fieldPath
+                                + " = " + entry.getValue()[0]);
                     }
                 } catch (Exception e) {
                     System.out.println("Erreur lors de l'extraction de : " + key);
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -392,18 +427,18 @@ public class ParameterMapper {
      * Crée un tableau d'objets à partir des données extraites
      */
     private static Object populateArray(Class<?> componentType, Map<Integer, Map<String, String>> arrayData)
-            throws InstantiationException, IllegalAccessException, IllegalArgumentException, 
-                   InvocationTargetException, NoSuchMethodException, SecurityException {
-        
+            throws InstantiationException, IllegalAccessException, IllegalArgumentException,
+            InvocationTargetException, NoSuchMethodException, SecurityException {
+
         // Trouver la taille maximale du tableau
         int maxIndex = arrayData.keySet().stream().max(Integer::compareTo).orElse(0);
         Object array = Array.newInstance(componentType, maxIndex + 1);
-        
+
         // Remplir chaque élément du tableau
         for (Map.Entry<Integer, Map<String, String>> entry : arrayData.entrySet()) {
             int index = entry.getKey();
             Map<String, String> objectFields = entry.getValue();
-            
+
             Object element;
             if (Utils.isPrimitive(componentType)) {
                 // Si c'est un type primitif, prendre directement la valeur
@@ -417,10 +452,10 @@ public class ParameterMapper {
                 // Si c'est un objet, utiliser populateObject
                 element = populateObject(componentType, objectFields);
             }
-            
+
             Array.set(array, index, element);
         }
-        
+
         return array;
     }
 
